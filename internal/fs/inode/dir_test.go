@@ -22,14 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/googlecloudplatform/gcsfuse/v2/internal/util"
-
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/cache/metadata"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/config"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/contentcache"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/storage/fake"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/storage/gcs"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/storage/storageutil"
+	"github.com/googlecloudplatform/gcsfuse/v2/internal/util"
 	"golang.org/x/net/context"
 
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/gcsx"
@@ -1409,21 +1408,32 @@ func (t *DirTest) DeleteChildDir_ImplicitDirTrue() {
 	ExpectEq(nil, err)
 }
 
-func (t *DirTest) CreateLocalChildFile_ShouldnotCreateObjectInGCS() {
-	const name = "qux"
-
-	// Create the local file inode.
-	core, err := t.in.CreateLocalChildFile(name)
+func (t *DirTest) LocalChildFileCore() {
+	core, err := t.in.LocalChildFileCore("qux")
 
 	AssertEq(nil, err)
-	AssertEq(true, core.Local)
-	AssertEq(nil, core.MinObject)
+	AssertEq(t.bucket.Name(), core.Bucket.Name())
+	AssertEq("foo/bar/qux", core.FullName.objectName)
+	AssertTrue(core.Local)
+}
 
-	// Object shouldn't get created in GCS.
-	result, err := t.in.LookUpChild(t.ctx, name)
-	AssertEq(nil, err)
-	AssertEq(nil, result)
-	ExpectEq(metadata.UnknownType, t.getTypeFromCache(name))
+func (t *DirTest) InsertIntoTypeCache() {
+	t.in.InsertFileIntoTypeCache("abc")
+	d := t.in.(*dirInode)
+
+	tp := t.tc.Get(d.cacheClock.Now(), "abc")
+
+	AssertEq(2, tp)
+}
+
+func (t *DirTest) EraseFromTypeCache() {
+	t.in.InsertFileIntoTypeCache("abc")
+
+	t.in.EraseFromTypeCache("abc")
+
+	d := t.in.(*dirInode)
+	tp := d.cache.Get(d.cacheClock.Now(), "abc")
+	AssertEq(0, tp)
 }
 
 func (t *DirTest) LocalFileEntriesEmpty() {

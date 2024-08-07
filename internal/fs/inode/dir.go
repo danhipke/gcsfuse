@@ -92,9 +92,14 @@ type DirInode interface {
 	// Return the full name of the child and the GCS object it backs up.
 	CreateChildFile(ctx context.Context, name string) (*Core, error)
 
-	// Create an empty local child file with the supplied (relative) name. Local
-	// file means the object is not yet created in GCS.
-	CreateLocalChildFile(name string) (*Core, error)
+	// LocalChildFileCore returns an empty local child file core.
+	LocalChildFileCore(name string) (Core, error)
+
+	// InsertFileIntoTypeCache adds the given file-name to type-cache
+	InsertFileIntoTypeCache(name string)
+
+	// EraseFromTypeCache removes the given file-name from type-cache
+	EraseFromTypeCache(name string)
 
 	// Like CreateChildFile, except clone the supplied source object instead of
 	// creating an empty object.
@@ -124,6 +129,8 @@ type DirInode interface {
 		name string,
 		generation int64,
 		metaGeneration *int64) (err error)
+
+	DeleteLocalChildFile(name string, inode *FileInode)
 
 	// Delete the backing object for the child directory with the given
 	// (relative) name if it is not an Implicit Directory.
@@ -785,15 +792,20 @@ func (d *dirInode) CreateChildFile(ctx context.Context, name string) (*Core, err
 	}, nil
 }
 
-func (d *dirInode) CreateLocalChildFile(name string) (*Core, error) {
-	fullName := NewFileName(d.Name(), name)
-
-	return &Core{
+func (d *dirInode) LocalChildFileCore(name string) (Core, error) {
+	return Core{
 		Bucket:    d.Bucket(),
-		FullName:  fullName,
+		FullName:  NewFileName(d.Name(), name),
 		MinObject: nil,
 		Local:     true,
 	}, nil
+}
+func (d *dirInode) InsertFileIntoTypeCache(name string) {
+	d.cache.Insert(d.cacheClock.Now(), name, metadata.RegularFileType)
+}
+
+func (d *dirInode) EraseFromTypeCache(name string) {
+	d.cache.Erase(name)
 }
 
 // LOCKS_REQUIRED(d)
@@ -882,6 +894,11 @@ func (d *dirInode) CreateChildDir(ctx context.Context, name string) (*Core, erro
 		MinObject: m,
 		Folder:    f,
 	}, nil
+}
+
+func (d *dirInode) DeleteLocalChildFile(name string, f *FileInode) {
+	d.cache.Erase(name)
+	f.Unlink()
 }
 
 // LOCKS_REQUIRED(d)

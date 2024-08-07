@@ -658,5 +658,5 @@ func (f *FileInode) CreateEmptyTempFile() (err error) {
 	f.content, err = f.contentCache.NewTempFile(io.NopCloser(strings.NewReader("")))
 	// Setting the initial mtime to creation time.
 	f.content.SetMtime(f.mtimeClock.Now())
-	return
+	return err
 }
