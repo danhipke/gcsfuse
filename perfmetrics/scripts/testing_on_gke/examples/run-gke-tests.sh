@@ -416,17 +416,6 @@ function listAllHelmCharts() {
   # gke-dlio-unet3d-100kb-500k-128-gcsfuse-file-cache deployed unet3d-loading-test-0.1.0
 }
 
-# function listAllPods() {
-  # echo "Listing all pods ..."
-  # kubectl get pods –-namespace=${appnamespace} || true
-  # kubectl get pods
-  #
-  # # Another useful command to list all your pods, which keep updating the live-status in the output.
-  # # kubectl get pods --watch --namespace=${appnamespace} || true
-  # # kubectl get pods --watch
-  # # kubectl exec -it --stdin pods/${podname} --namespace=${appnamespace} -- /bin/bash
-# }
-
 function waitTillAllPodsComplete() {
   echo "Scanning and waiting till all pods complete or one of them fails ..."
   while true; do
