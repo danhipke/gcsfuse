@@ -296,24 +296,6 @@ function enableManagedCsiDriverIfNeeded() {
   fi
 }
 
-# function dataLoaderBucketNames() {
-  # local workloadConfigFileNames="$@"
-  # for workloadFileName in "${workloadConfigFileNames}"; do
-    # workloadConfigFilePath="$workloadFileName"
-    # if test -f "${workloadConfigFilePath}"; then
-      # grep -wh '\"bucket\"' "${workloadConfigFilePath}" | cut -d: -f2 | cut -d, -f1 | cut -d \" -f2 | sort | uniq | grep -v ' ' | sort | uniq
-    # fi
-  # done
-# }
-#
-# function fioDataLoaderBucketNames() {
-  # dataLoaderBucketNames "${gke_testing_dir}"/examples/workloads.json
-# }
-#
-# function dlioDataLoaderBucketNames() {
-  # dataLoaderBucketNames "${gke_testing_dir}"/examples/workloads.json
-# }
-
 function activateCluster() {
   echo "Configuring cluster credentials ..."
   gcloud container clusters get-credentials ${cluster_name} --location=${zone}
@@ -500,56 +482,6 @@ function revertPodConfigsFilesAfterTestRuns() {
   done
 }
 
-# function printOutputFioFilesList() {
-  # echo ""
-  # fioDataLoaderBucketNames | while read bucket; do
-    # echo "${bucket}:"
-    # gcloud storage ls -l gs://${bucket}/fio-output/${instance_id}/*/*/* | (grep -e 'json\|gcsfuse_mount_options' || true)
-  # done
-# }
-#
-# function printOutputDlioFilesList() {
-  # echo ""
-  # dlioDataLoaderBucketNames | while read bucket; do
-    # echo "${bucket}:"
-    # gcloud storage ls -l gs://${bucket}/logs/${instance_id}/*/*/* | (grep -e 'summary\.json\|per_epoch_stats\.json\|gcsfuse_mount_options' || true)
-  # done
-# }
-
-# function archiveFioOutputs() {
-  # echo "Archiving existing fio outputs ..."
-  # fioDataLoaderBucketNames | while read bucket; do
-    # log="$(gsutil -mq mv -r gs://${bucket}/fio-output/* gs://${bucket}/old-fio-output/ 2>&1)" || ([[ "${log}" == *"No URLs matched"* ]] && echo "ignored error: ${log}")
-  # done
-#
-  # # cd "${gke_testing_dir}"/examples/fio
-  # mkdir -pv "${gke_testing_dir}"/bin/fio-logs "${gke_testing_dir}"/bin/old-fio-logs # backup to avoid failing the next commands
-  # # log="$(rsync -avz --ignore-existing "${gke_testing_dir}"/bin/fio-logs/* "${gke_testing_dir}"/bin/old-fio-logs/ 2>&1)" || ( [[ "${log}" == *"some files/attributes were not transferred"* ]] && echo "ignored error: ${log}")
-  # rm -rfv "${gke_testing_dir}"/bin/old-fio-logs/*
-  # mv -v "${gke_testing_dir}"/bin/fio-logs/* "${gke_testing_dir}"/bin/old-fio-logs/ || true
-  # # cd -
-# }
-#
-# function archiveDlioOutputs() {
-  # echo "Archiving existing dlio outputs ..."
-  # dlioDataLoaderBucketNames | while read bucket; do
-    # log="$(gsutil -mq mv -r gs://${bucket}/logs/* gs://${bucket}/old-logs/ 2>&1)" || ([[ "${log}" == *"No URLs matched"* ]] && echo "ignored error: ${log}")
-  # done
-#
-  # # cd "${gke_testing_dir}"/examples/dlio
-  # mkdir -pv "${gke_testing_dir}"/bin/dlio-logs "${gke_testing_dir}"/bin/old-dlio-logs/ # backup to avoid failing the next commands
-  # # log="$(rsync -avz --ignore-existing "${gke_testing_dir}"/bin/dlio-logs/* "${gke_testing_dir}"/bin/old-dlio-logs/ 2>&1)" || ( [[ "${log}" == *"some files/attributes were not transferred"* ]] && echo "ignored error: ${log}")
-  # rm -rfv "${gke_testing_dir}"/bin/old-dlio-logs/*
-  # mv -v "${gke_testing_dir}"/bin/dlio-logs/* "${gke_testing_dir}"/bin/old-dlio-logs/ || true
-#
-  # cd -
-# }
-
-# function archiveExistingOutputFiles() {
-  # archiveFioOutputs
-  # archiveDlioOutputs
-# }
-
 function fetchAndParseFioOutputs() {
   echo "Fetching and parsing fio outputs ..."
   cd "${gke_testing_dir}"/examples/fio
@@ -587,7 +519,6 @@ createCustomCsiDriverIfNeeded
 
 # Run latest workload configuration
 deleteAllPods
-# archiveExistingOutputFiles
 updatePodConfigs
 deployAllFioHelmCharts
 deployAllDlioHelmCharts
@@ -600,9 +531,5 @@ waitTillAllPodsComplete
 # clean-up after run
 deleteAllPods
 deleteAllHelmCharts
-# printOutputFioFilesList
-# printOutputDlioFilesList
 fetchAndParseFioOutputs
 fetchAndParseDlioOutputs
-# archiveFioOutputs
-# archiveDlioOutputs
