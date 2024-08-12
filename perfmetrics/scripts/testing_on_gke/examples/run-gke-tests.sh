@@ -36,7 +36,7 @@ readonly DEFAULT_APPNAMESPACE=default
 readonly DEFAULT_KSA=default
 readonly DEFAULT_USE_CUSTOM_CSI_DRIVER=false
 # GCSFuse/GKE GCSFuse CSI Driver source code related
-readonly DEFAULT_SRC_DIR=$(realpath .)/src
+readonly DEFAULT_SRC_DIR="$(realpath .)/src"
 readonly csi_driver_github_path=https://github.com/googlecloudplatform/gcs-fuse-csi-driver
 readonly csi_driver_branch=main
 readonly gcsfuse_github_path=https://github.com/googlecloudplatform/gcsfuse
@@ -106,26 +106,28 @@ test -n "${appnamespace}" || export appnamespace=${DEFAULT_APPNAMESPACE}
 test -n "${ksa}" || export ksa=${DEFAULT_KSA}
 test -n "${use_custom_csi_driver}" || export use_custom_csi_driver="${DEFAULT_USE_CUSTOM_CSI_DRIVER}"
 # GCSFuse/GKE GCSFuse CSI Driver source code related
-test -n "${src_dir}" || export src_dir=${DEFAULT_SRC_DIR}
+(test -n "${src_dir}" && src_dir="$(realpath "${src_dir}")") || export src_dir=${DEFAULT_SRC_DIR}
 test -d "${src_dir}" || mkdir -pv "${src_dir}"
-test -n "${gcsfuse_src_dir}" || export gcsfuse_src_dir="${src_dir}"/gcsfuse
+(test -n "${gcsfuse_src_dir}" && gcsfuse_src_dir="$(realpath "${gcsfuse_src_dir}")") || export gcsfuse_src_dir="${src_dir}"/gcsfuse
 export gke_testing_dir="${gcsfuse_src_dir}"/perfmetrics/scripts/testing_on_gke
-test -n "${csi_src_dir}" || export csi_src_dir="${src_dir}"/gcs-fuse-csi-driver
+(test -n "${csi_src_dir}" && csi_src_dir="$(realpath "${csi_src_dir}")") || export csi_src_dir="${src_dir}"/gcs-fuse-csi-driver
 # GCSFuse configuration related
 test -n "${gcsfuse_mount_options}" || export gcsfuse_mount_options="${DEFAULT_GCSFUSE_MOUNT_OPTIONS}"
 # Test runtime configuration
 test -n "${pod_wait_time_in_seconds}" || export pod_wait_time_in_seconds="${DEFAULT_POD_WAIT_TIME_IN_SECONDS}"
 test -n "${instance_id}" || export instance_id="${DEFAULT_INSTANCE_ID}"
 if test -n "${workload_config}"; then
-  test -f "${workload_config}"
+  workload_config="$(realpath "${workload_config}")"
 else
     export workload_config="${gke_testing_dir}"/examples/workloads.json
 fi
+test -f "${workload_config}"
 if test -n "${output_dir}"; then
-  test -d "${output_dir}"
+  output_dir="$(realpath "${output_dir}")"
 else
   export output_dir="${gke_testing_dir}"/examples
 fi
+test -d "${output_dir}"
 
 function printRunParameters() {
   echo "Running $0 with following parameters:"
@@ -162,6 +164,7 @@ function printRunParameters() {
 
 # Install dependencies.
 function installDependencies() {
+  which realpath
   which helm || (cd "${src_dir}" && (test -d "./helm" || git clone https://github.com/helm/helm.git) && cd helm && make && ls -lh bin/ && mkdir -pv ~/bin && cp -fv bin/helm ~/bin/ && chmod +x ~/bin/helm && export PATH=$PATH:$HOME/bin && echo $PATH && which helm && cd - && cd -)
   # install o
   which go || (version=1.22.4 && wget -O go_tar.tar.gz https://go.dev/dl/go${version}.linux-amd64.tar.gz && sudo rm -rf /usr/local/go && tar -xzf go_tar.tar.gz && sudo mv go /usr/local && export PATH=${PATH}:/usr/local/go/bin && go version && rm -rfv go_tar.tar.gz && echo 'export PATH=${PATH}:/usr/local/go/bin' >>~/.bashrc)
