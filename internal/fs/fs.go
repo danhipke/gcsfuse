@@ -825,6 +825,9 @@ func (fs *fileSystem) createDirInode(ic inode.Core, inodes map[inode.Name]inode.
 
 	for n := 0; n < maxTriesToCreateInode; n++ {
 		in, ok := (inodes)[ic.FullName]
+		if in != nil {
+		logger.Info("IsUnlinkFolder(): ", in.IsUnlinkFolder())
+		}
 		if !ok || (in != nil && in.IsUnlinkFolder()) {
 		in, ok = (inodes)[ic.FullName]
 			in := fs.mintInode(ic)
@@ -1674,6 +1677,7 @@ func (fs *fileSystem) createLocalFile(
 
 	fullName := inode.NewFileName(parent.Name(), name)
 	child, ok := fs.localFileInodes[fullName]
+	fmt.Println("local file in child : ", ok)
 	if !ok {
 		var result *inode.Core
 		result, err = parent.CreateLocalChildFile(name)
@@ -1711,6 +1715,7 @@ func (fs *fileSystem) CreateFile(
 	if fs.mountConfig.CreateEmptyFile {
 		child, err = fs.createFile(ctx, op.Parent, op.Name, op.Mode)
 	} else {
+		fmt.Println("Here")
 		child, err = fs.createLocalFile(op.Parent, op.Name)
 	}
 
@@ -1911,15 +1916,13 @@ func (fs *fileSystem) RmDir(
 	_, isImplicitDir := fs.implicitDirInodes[child.Name()]
 	fs.mu.Unlock()
 	parent.Lock()
-	err = parent.DeleteChildDir(ctx, op.Name, isImplicitDir)
+	err = parent.DeleteChildDir(ctx, op.Name, isImplicitDir, childDir)
 	parent.Unlock()
 
 	if err != nil {
 		err = fmt.Errorf("DeleteChildDir: %w", err)
 		return err
 	}
-
-	childDir.UnLinkFolder()
 
 	return
 }
@@ -2152,7 +2155,7 @@ func (fs *fileSystem) renameDir(
 	_, isImplicitDir := fs.implicitDirInodes[oldDir.Name()]
 	fs.mu.Unlock()
 	oldParent.Lock()
-	err = oldParent.DeleteChildDir(ctx, oldName, isImplicitDir)
+	err = oldParent.DeleteChildDir(ctx, oldName, isImplicitDir, oldDir)
 	oldParent.Unlock()
 	if err != nil {
 		return fmt.Errorf("DeleteChildDir: %w", err)
@@ -2263,6 +2266,7 @@ func (fs *fileSystem) ReadDir(
 	// Fetch local file entries beforehand and pass it to directory handle as
 	// we need fs lock to fetch local file entries.
 	localFileEntries := in.LocalFileEntries(fs.localFileInodes)
+	fmt.Println("local entries: ", localFileEntries)
 	fs.mu.Unlock()
 
 	dh.Mu.Lock()

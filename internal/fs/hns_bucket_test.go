@@ -15,10 +15,12 @@
 package fs_test
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/googlecloudplatform/gcsfuse/v2/cfg"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/config"
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/storage/gcs"
 	"github.com/stretchr/testify/assert"
@@ -34,9 +36,14 @@ type HNSBucketTests struct {
 func TestHNSBucketTests(t *testing.T) { suite.Run(t, new(HNSBucketTests)) }
 
 func (t *HNSBucketTests) SetupSuite() {
-	t.serverCfg.MountConfig = &config.MountConfig{EnableHNS: true}
 	t.serverCfg.ImplicitDirectories = false
-	bucketType = gcs.Hierarchical
+	bucketType = gcs.NonHierarchical
+	t.serverCfg.MountConfig = &config.MountConfig{
+		WriteConfig: cfg.WriteConfig{
+			CreateEmptyFile: false,
+		},
+		EnableHNS: true,
+	}
 	t.fsTest.SetUpTestSuite()
 }
 
@@ -99,4 +106,31 @@ func (t *HNSBucketTests) TestDeleteFolder() {
 	assert.NoError(t.T(), err)
 	_, err = os.Stat(dirPath)
 	assert.NotNil(t.T(), err)
+}
+
+func (t *HNSBucketTests) TestDeleteFolderWithOpenFiles() {
+	dirPath := path.Join(mntDir, "foo", "test2")
+	filePath := path.Join(dirPath, "test.txt")
+	_, err = os.Create(filePath)
+	require.NoError(t.T(), err)
+	_, err = os.Stat(filePath)
+	require.NoError(t.T(), err)
+	d , err := os.ReadDir(dirPath)
+
+	err = os.RemoveAll(dirPath)
+	assert.NoError(t.T(), err)
+	err = os.Mkdir(dirPath, 0755)
+	assert.NoError(t.T(), err)
+	f, err := os.Create(filePath)
+
+  fmt.Println(f.Name())
+	fmt.Println(dirPath)
+	assert.NoError(t.T(), err)
+	_, err = os.Stat(dirPath)
+	assert.NoError(t.T(), err)
+	d , err = os.ReadDir(dirPath)
+	assert.NoError(t.T(), err)
+	fmt.Println("d: ", d)
+	_, err = os.Stat(filePath)
+	assert.NoError(t.T(), err)
 }
