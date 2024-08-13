@@ -37,7 +37,7 @@ func TestHNSBucketTests(t *testing.T) { suite.Run(t, new(HNSBucketTests)) }
 
 func (t *HNSBucketTests) SetupSuite() {
 	t.serverCfg.ImplicitDirectories = false
-	bucketType = gcs.NonHierarchical
+	bucketType = gcs.Hierarchical
 	t.serverCfg.MountConfig = &config.MountConfig{
 		WriteConfig: cfg.WriteConfig{
 			CreateEmptyFile: false,
@@ -115,7 +115,6 @@ func (t *HNSBucketTests) TestDeleteFolderWithOpenFiles() {
 	require.NoError(t.T(), err)
 	_, err = os.Stat(filePath)
 	require.NoError(t.T(), err)
-	d , err := os.ReadDir(dirPath)
 
 	err = os.RemoveAll(dirPath)
 	assert.NoError(t.T(), err)
@@ -126,11 +125,6 @@ func (t *HNSBucketTests) TestDeleteFolderWithOpenFiles() {
   fmt.Println(f.Name())
 	fmt.Println(dirPath)
 	assert.NoError(t.T(), err)
-	_, err = os.Stat(dirPath)
-	assert.NoError(t.T(), err)
-	d , err = os.ReadDir(dirPath)
-	assert.NoError(t.T(), err)
-	fmt.Println("d: ", d)
 	_, err = os.Stat(filePath)
 	assert.NoError(t.T(), err)
 }
