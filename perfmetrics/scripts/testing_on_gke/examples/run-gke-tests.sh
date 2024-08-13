@@ -166,10 +166,8 @@ function printRunParameters() {
 function installDependencies() {
   which realpath
   which helm || (cd "${src_dir}" && (test -d "./helm" || git clone https://github.com/helm/helm.git) && cd helm && make && ls -lh bin/ && mkdir -pv ~/bin && cp -fv bin/helm ~/bin/ && chmod +x ~/bin/helm && export PATH=$PATH:$HOME/bin && echo $PATH && which helm && cd - && cd -)
-  # install o
   which go || (version=1.22.4 && wget -O go_tar.tar.gz https://go.dev/dl/go${version}.linux-amd64.tar.gz && sudo rm -rf /usr/local/go && tar -xzf go_tar.tar.gz && sudo mv go /usr/local && export PATH=${PATH}:/usr/local/go/bin && go version && rm -rfv go_tar.tar.gz && echo 'export PATH=${PATH}:/usr/local/go/bin' >>~/.bashrc)
   which python3 && sudo apt-get install python3-absl
-  # which kubectl || (gcloud components install kubectl && kubectl version --client && (gke-gcloud-auth-plugin --version || (gcloud components install gke-gcloud-auth-plugin && gke-gcloud-auth-plugin --version))) || (sudo apt-get update -y && sudo apt-get install -y kubectl)
   (which kubectl && kubectl version --client) || (gcloud components install kubectl && which kubectl && kubectl version --client) || (sudo apt-get update -y && sudo apt-get install -y kubectl && which kubectl && kubectl version --client)
   gke-gcloud-auth-plugin --version || (gcloud components install gke-gcloud-auth-plugin && gke-gcloud-auth-plugin --version) || (sudo apt-get update -y && sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin && gke-gcloud-auth-plugin --version)
 }
@@ -359,8 +357,8 @@ function ensureGcsFuseCsiDriverCode() {
 }
 
 function createCustomCsiDriverIfNeeded() {
-  echo "Creating custom CSI driver ..."
   if ${use_custom_csi_driver}; then
+    echo "Creating custom CSI driver ..."
     # disable managed CSI driver.
     gcloud -q container clusters update ${cluster_name} --update-addons GcsFuseCsiDriver=DISABLED --location=${zone}
 
@@ -384,6 +382,7 @@ function createCustomCsiDriverIfNeeded() {
     cd -
 
     # Build and install csi driver
+    ensureGcsFuseCsiDriverCode
     cd "${csi_src_dir}"
     make build-image-and-push-multi-arch REGISTRY=gcr.io/${project_id}/${USER} GCSFUSE_PATH=gs://${package_bucket}
     make install PROJECT=${project_id} REGISTRY=gcr.io/${project_id}/${USER}
@@ -391,7 +390,7 @@ function createCustomCsiDriverIfNeeded() {
     # make uninstall
     cd -
   else
-    echo ""
+    echo "Enabling CSI Driver add-on ..."
     # enable managed CSI driver.
     gcloud -q container clusters update ${cluster_name} --update-addons GcsFuseCsiDriver=ENABLED --location=${zone}
   fi
@@ -460,7 +459,6 @@ function waitTillAllPodsComplete() {
   done
 }
 
-
 function fetchAndParseFioOutputs() {
   echo "Fetching and parsing fio outputs ..."
   cd "${gke_testing_dir}"/examples/fio
@@ -488,9 +486,8 @@ enableManagedCsiDriverIfNeeded
 activateCluster
 createKubernetesServiceAccountForCluster
 
-# GCSFuse/CSI driver source code
+# GCSFuse driver source code
 ensureGcsfuseCode
-ensureGcsFuseCsiDriverCode
 
 # GCP/GKE configuration dependent on GCSFuse/CSI driver source code
 addGCSAccessPermissions
@@ -507,6 +504,5 @@ waitTillAllPodsComplete
 
 # clean-up after run
 deleteAllPods
-deleteAllHelmCharts
 fetchAndParseFioOutputs
 fetchAndParseDlioOutputs
