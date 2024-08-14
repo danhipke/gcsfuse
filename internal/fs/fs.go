@@ -825,8 +825,6 @@ func (fs *fileSystem) createDirInode(ic inode.Core, inodes map[inode.Name]inode.
 
 	for n := 0; n < maxTriesToCreateInode; n++ {
 		in, ok := (inodes)[ic.FullName]
-		if in != nil {
-		}
 		if !ok || (in != nil && in.IsUnlinkFolder()) {
 		in, ok = (inodes)[ic.FullName]
 			in := fs.mintInode(ic)
