@@ -1681,7 +1681,9 @@ func (fs *fileSystem) createLocalFile(
 		return child, nil
 	}
 
+	fs.mu.Unlock()
 	parent.Lock()
+	fs.mu.Lock()
 	defer func() {
 		if err != nil {
 			parent.EraseFromTypeCache(name)
