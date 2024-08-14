@@ -1681,15 +1681,6 @@ func (fs *fileSystem) createLocalFile(
 		return child, nil
 	}
 
-	fs.mu.Unlock()
-	parent.Lock()
-	fs.mu.Lock()
-	defer func() {
-		if err != nil {
-			parent.EraseFromTypeCache(name)
-		}
-		parent.Unlock()
-	}()
 	core, err := parent.LocalChildFileCore(name)
 	if err != nil {
 		return nil, err
@@ -1702,8 +1693,18 @@ func (fs *fileSystem) createLocalFile(
 	if err := fileInode.CreateEmptyTempFile(); err != nil {
 		return nil, err
 	}
+	fs.mu.Unlock()
+	parent.Lock()
+	defer func() {
+		if err != nil {
+			parent.EraseFromTypeCache(name)
+		}
+		parent.Unlock()
+	}()
 	parent.InsertFileIntoTypeCache(name)
-
+	// Even though there is no action here that requires locking, adding locking
+	// so that the defer call that unlocks the mutext doesn't fail.
+	fs.mu.Lock()
 	return child, nil
 }
 

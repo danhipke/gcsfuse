@@ -898,7 +898,7 @@ func (d *dirInode) CreateChildDir(ctx context.Context, name string) (*Core, erro
 	}, nil
 }
 
-// LOCKS_REQUIRED(f)
+// LOCKS_REQUIRED(f.mu)
 func (d *dirInode) DeleteLocalChildFile(name string, f *FileInode) {
 	d.cache.Erase(name)
 	f.Unlink()
