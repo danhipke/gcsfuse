@@ -93,7 +93,7 @@ type DirInode interface {
 	CreateChildFile(ctx context.Context, name string) (*Core, error)
 
 	// LocalChildFileCore returns an empty local child file core.
-	LocalChildFileCore(name string) (Core, error)
+	LocalChildFileCore(name string) Core
 
 	// InsertFileIntoTypeCache adds the given file-name to type-cache
 	InsertFileIntoTypeCache(name string)
@@ -790,13 +790,13 @@ func (d *dirInode) CreateChildFile(ctx context.Context, name string) (*Core, err
 	}, nil
 }
 
-func (d *dirInode) LocalChildFileCore(name string) (Core, error) {
+func (d *dirInode) LocalChildFileCore(name string) Core {
 	return Core{
 		Bucket:    d.Bucket(),
 		FullName:  NewFileName(d.Name(), name),
 		MinObject: nil,
 		Local:     true,
-	}, nil
+	}
 }
 
 // LOCKS_REQUIRED(d)

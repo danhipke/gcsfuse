@@ -1409,9 +1409,8 @@ func (t *DirTest) DeleteChildDir_ImplicitDirTrue() {
 }
 
 func (t *DirTest) LocalChildFileCore() {
-	core, err := t.in.LocalChildFileCore("qux")
+	core := t.in.LocalChildFileCore("qux")
 
-	AssertEq(nil, err)
 	AssertEq(t.bucket.Name(), core.Bucket.Name())
 	AssertEq("foo/bar/qux", core.FullName.objectName)
 	AssertTrue(core.Local)
