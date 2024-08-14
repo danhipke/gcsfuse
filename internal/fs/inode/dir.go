@@ -800,6 +800,8 @@ func (d *dirInode) LocalChildFileCore(name string) (Core, error) {
 		Local:     true,
 	}, nil
 }
+
+// LOCKS_REQUIRED(d)
 func (d *dirInode) InsertFileIntoTypeCache(name string) {
 	d.cache.Insert(d.cacheClock.Now(), name, metadata.RegularFileType)
 }
@@ -896,6 +898,7 @@ func (d *dirInode) CreateChildDir(ctx context.Context, name string) (*Core, erro
 	}, nil
 }
 
+// LOCKS_REQUIRED(f)
 func (d *dirInode) DeleteLocalChildFile(name string, f *FileInode) {
 	d.cache.Erase(name)
 	f.Unlink()
