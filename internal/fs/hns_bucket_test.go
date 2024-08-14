@@ -107,11 +107,11 @@ func (t *HNSBucketTests) TestDeleteFolder() {
 	assert.NotNil(t.T(), err)
 }
 
-func (t *HNSBucketTests)  TestCreateLocalFileInSamePathAfterDeletingParentDirectory() {
+func (t *HNSBucketTests) TestCreateLocalFileInSamePathAfterDeletingParentDirectory() {
 	dirPath := path.Join(mntDir, "foo", "test2")
 	filePath := path.Join(dirPath, "test.txt")
 	f1, err := os.Create(filePath)
-	defer require.NoError(t.T(),f1.Close())
+	defer require.NoError(t.T(), f1.Close())
 	require.NoError(t.T(), err)
 	_, err = os.Stat(filePath)
 	require.NoError(t.T(), err)
