@@ -15,7 +15,6 @@
 package fs_test
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -108,23 +107,21 @@ func (t *HNSBucketTests) TestDeleteFolder() {
 	assert.NotNil(t.T(), err)
 }
 
-func (t *HNSBucketTests) TestDeleteFolderWithOpenFiles() {
+func (t *HNSBucketTests)  TestCreateLocalFileInSamePathAfterDeletingParentDirectory() {
 	dirPath := path.Join(mntDir, "foo", "test2")
 	filePath := path.Join(dirPath, "test.txt")
-	_, err = os.Create(filePath)
+	f1, err := os.Create(filePath)
+	defer require.NoError(t.T(),f1.Close())
 	require.NoError(t.T(), err)
 	_, err = os.Stat(filePath)
 	require.NoError(t.T(), err)
-
 	err = os.RemoveAll(dirPath)
 	assert.NoError(t.T(), err)
 	err = os.Mkdir(dirPath, 0755)
 	assert.NoError(t.T(), err)
-	f, err := os.Create(filePath)
 
-  fmt.Println(f.Name())
-	fmt.Println(dirPath)
-	assert.NoError(t.T(), err)
-	_, err = os.Stat(filePath)
+	f2, err := os.Create(filePath)
+	defer require.NoError(t.T(), f2.Close())
+
 	assert.NoError(t.T(), err)
 }
