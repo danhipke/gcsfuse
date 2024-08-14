@@ -2194,10 +2194,13 @@ func (fs *fileSystem) Unlink(
 	fileInode, ok := fs.localFileInodes[fileName]
 	if ok {
 		file := fs.fileInodeOrDie(fileInode.ID())
-		fs.mu.Unlock()
 		file.Lock()
 		defer file.Unlock()
-		parent.DeleteLocalChildFile(op.Name, file)
+		parent.Lock()
+		defer parent.Unlock()
+		parent.EraseFromTypeCache(op.Name)
+		parent.Unlock()
+		file.Unlink()
 
 		return
 	}

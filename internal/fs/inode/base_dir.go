@@ -228,8 +228,6 @@ func (d *baseDirInode) DeleteChildFile(
 	return
 }
 
-func (d *baseDirInode) DeleteLocalChildFile(_ string, _ *FileInode) {}
-
 func (d *baseDirInode) DeleteChildDir(
 	ctx context.Context,
 	name string,

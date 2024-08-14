@@ -130,8 +130,6 @@ type DirInode interface {
 		generation int64,
 		metaGeneration *int64) (err error)
 
-	DeleteLocalChildFile(name string, inode *FileInode)
-
 	// Delete the backing object for the child directory with the given
 	// (relative) name if it is not an Implicit Directory.
 	DeleteChildDir(
@@ -806,6 +804,7 @@ func (d *dirInode) InsertFileIntoTypeCache(name string) {
 	d.cache.Insert(d.cacheClock.Now(), name, metadata.RegularFileType)
 }
 
+// LOCKS_REQUIRED(d)
 func (d *dirInode) EraseFromTypeCache(name string) {
 	d.cache.Erase(name)
 }
@@ -896,12 +895,6 @@ func (d *dirInode) CreateChildDir(ctx context.Context, name string) (*Core, erro
 		MinObject: m,
 		Folder:    f,
 	}, nil
-}
-
-// LOCKS_REQUIRED(f.mu)
-func (d *dirInode) DeleteLocalChildFile(name string, f *FileInode) {
-	d.cache.Erase(name)
-	f.Unlink()
 }
 
 // LOCKS_REQUIRED(d)
