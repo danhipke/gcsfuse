@@ -2038,7 +2038,7 @@ func (fs *fileSystem) getBucketDirInode(ctx context.Context, parent inode.DirIno
 	return dir, nil
 }
 
-func (fs *fileSystem) ensureNoOpenFilesInDirectory(dir inode.BucketOwnedDirInode, name string) error {
+func (fs *fileSystem) ensureNoLocalFilesInDirectory(dir inode.BucketOwnedDirInode, name string) error {
 	fs.mu.Lock()
 	entries := dir.LocalFileEntries(fs.localFileInodes)
 	fs.mu.Unlock()
@@ -2081,7 +2081,7 @@ func (fs *fileSystem) renameFolder(ctx context.Context, oldParent inode.DirInode
 	}
 	pendingInodes = append(pendingInodes, oldDirInode)
 
-	if err = fs.ensureNoOpenFilesInDirectory(oldDirInode, oldName); err != nil {
+	if err = fs.ensureNoLocalFilesInDirectory(oldDirInode, oldName); err != nil {
 		return err
 	}
 
@@ -2139,7 +2139,7 @@ func (fs *fileSystem) renameDir(
 	}
 	pendingInodes = append(pendingInodes, oldDir)
 
-	if err = fs.ensureNoOpenFilesInDirectory(oldDir, oldName); err != nil {
+	if err = fs.ensureNoLocalFilesInDirectory(oldDir, oldName); err != nil {
 		return err
 	}
 
