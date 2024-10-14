@@ -10,6 +10,9 @@ import (
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/logger"
 )
 
+// TODO: memory usage is much higher than expected - remove unnecessary memory allocations (e.g. file free up buffers once we no longer need them)
+// TODO: there is no cap across gcsfuse on how much memory this can take up - multiple filehandles will each cache the same amount of data. look at options.
+// TODO: do we get a similar benefit if we don't copy all data into buffers and just read from the underlying reader?
 // ParallelReader is a reader capable of downloading from GCS in parallel.
 type ParallelReader struct {
 	ctx             context.Context
