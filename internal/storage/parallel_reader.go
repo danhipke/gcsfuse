@@ -14,9 +14,9 @@ import (
 type ParallelReader struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
-	objectSize      int64
 	start           int64
-	objectOffset    int64
+	end             int64
+	curOffset       int64
 	partSizeBytes   int64
 	workers         []*downloadWorker
 	currentWorkerID int
@@ -37,17 +37,19 @@ type downloadWorker struct {
 }
 
 // NewParallelReader creates workers with readers for parallel download.
-func NewParallelReader(ctx context.Context, bucket *storage.BucketHandle, objectName string, readCompressed bool, start, generation, totalBytes int64, chunkSizeMb, numWorkers int32) (*ParallelReader, error) {
+func NewParallelReader(ctx context.Context, bucket *storage.BucketHandle, objectName string, readCompressed bool, start, generation, end int64, chunkSizeMb, numWorkers int32) (*ParallelReader, error) {
 
 	r := &ParallelReader{
-		objectSize:     int64(totalBytes),
+		start:          start,
+		end:            int64(end),
+		curOffset:      start,
 		partSizeBytes:  int64(chunkSizeMb * 1024 * 1024),
 		workers:        make([]*downloadWorker, numWorkers),
 		idleWorkersIDs: make(chan int, numWorkers),
 	}
 	r.ctx, r.cancel = context.WithCancel(ctx)
 
-	logger.Infof("Performing parallel restore - objectName: %s, numWorkers: %d", objectName, numWorkers)
+	logger.Debugf("Performing parallel read - objectName: %s, numWorkers: %d, start: %d, end: %d", objectName, numWorkers, start, end)
 	for i := 0; i < int(numWorkers); i++ {
 		r.workers[i] = &downloadWorker{
 			buffer: make([]byte, r.partSizeBytes),
@@ -62,7 +64,7 @@ func NewParallelReader(ctx context.Context, bucket *storage.BucketHandle, object
 		}
 	}
 	r.start = start
-	r.objectOffset = start
+	r.curOffset = start
 	return r, nil
 }
 
@@ -71,17 +73,14 @@ func (r *ParallelReader) Read(p []byte) (int, error) {
 	if r == nil {
 		return 0, errors.New("no parallel reader defined")
 	}
-	// TODO(dhipke): fix this to support partial chunks
-	if r.objectOffset >= r.objectSize || (r.workers[r.currentWorkerID].last && r.workers[r.currentWorkerID].BytesRemain == 0) {
-		logger.Info("RETURNING EOF")
+	if r.curOffset >= r.end || (r.workers[r.currentWorkerID].last && r.workers[r.currentWorkerID].BytesRemain == 0) {
 		return 0, io.EOF
 	}
 	// In the first Read() call, kickoff all the workers to download their respective first chunk in parallel.
-	if r.objectOffset == r.start {
-		logger.Infof("Workers started - numWorkers: %d, offset: %d", len(r.workers), r.objectOffset)
+	if r.curOffset == r.start {
+		logger.Debugf("Workers started")
 		for i := 0; i < len(r.workers); i++ {
-			if startByte := r.start + r.partSizeBytes*int64(i); startByte < r.objectSize {
-				// logger.Infof("startByte: %d", startByte)
+			if startByte := r.start + r.partSizeBytes*int64(i); startByte < r.end {
 				if r.workers[i] == nil {
 					r.cancel()
 					return 0, fmt.Errorf("no worker defined")
@@ -115,7 +114,7 @@ func (r *ParallelReader) Read(p []byte) (int, error) {
 	dataToCopy := r.workers[id].buffer[bufOffset:r.workers[id].chunkSize]
 	n := copy(p, dataToCopy)
 
-	r.objectOffset += int64(n)
+	r.curOffset += int64(n)
 	r.workers[id].bufferOffset += int64(n)
 	r.workers[id].BytesRemain -= int64(n)
 
@@ -124,7 +123,7 @@ func (r *ParallelReader) Read(p []byte) (int, error) {
 		r.workers[id].copyReady = false
 		// Check if the current worker need to be assigned a new chunk.
 		// The next len(r.workers) - 1 chunks are already assigned to the workers for downloading.
-		if startByte := r.objectOffset + int64(len(r.workers)-1)*r.partSizeBytes; startByte < r.objectSize {
+		if startByte := r.curOffset + int64(len(r.workers)-1)*r.partSizeBytes; startByte < r.end {
 			assignWorkersChunk(r, startByte, id)
 		} else {
 			r.workers[id].last = true
@@ -150,7 +149,7 @@ func assignWorkersChunk(r *ParallelReader, startByte int64, id int) {
 func fillWorkerBuffer(r *ParallelReader, worker *downloadWorker, startByte int64) error {
 	// Assigns reader to worker with the given startByte and chunk length.
 	var err error
-	toRead := min(r.partSizeBytes, r.objectSize-startByte)
+	toRead := min(r.partSizeBytes, r.end-startByte)
 	if worker.reader, err = worker.object.NewRangeReader(r.ctx, startByte, toRead /*r.partSizeBytes*/); err != nil {
 		return fmt.Errorf("failed to create range reader: %v", err)
 	}

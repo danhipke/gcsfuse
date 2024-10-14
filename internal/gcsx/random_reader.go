@@ -506,8 +506,7 @@ func (rr *randomReader) startRead(
 		},
 		ReadCompressed: rr.object.HasContentEncodingGzip(),
 	}
-	logger.Infof("creating reader with start %d and end %d", uint64(start), uint64(end))
-	logger.Infof("parallelReadConfig: %v", rr.parallelReadConfig)
+
 	var rc io.ReadCloser
 	if rr.parallelReadConfig.enable {
 		rc, err = rr.bucket.NewParallelReader(
