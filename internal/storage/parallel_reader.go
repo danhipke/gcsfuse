@@ -11,8 +11,10 @@ import (
 )
 
 // TODO: memory usage is much higher than expected - remove unnecessary memory allocations (e.g. file free up buffers once we no longer need them)
-// TODO: there is no cap across gcsfuse on how much memory this can take up - multiple filehandles will each cache the same amount of data. look at options.
-// TODO: do we get a similar benefit if we don't copy all data into buffers and just read from the underlying reader?
+// TODO: there is no cap across gcsfuse on how much memory this can take up - multiple filehandles will each cache the same amount of data. look at restricting readahead buffers, but perhaps this is not important for diskless environments with sufficient memory.
+// TODO: determine optimal # of workers. currently, 16 and 10MB seems good, but maybe 5MB is sufficient?
+// TODO: add tests.
+
 // ParallelReader is a reader capable of downloading from GCS in parallel.
 type ParallelReader struct {
 	ctx             context.Context
