@@ -303,6 +303,23 @@ func newApp() (app *cli.App) {
 					" in the meantime using the same mount, since we are not refreshing the cache, it will still return nil.",
 			},
 
+			cli.BoolFlag{
+				Name:  "enable-parallel-reads",
+				Usage: "Enables parallelization of sequential reads.",
+			},
+
+			cli.IntFlag{
+				Name:  "num-workers-parallel-reads",
+				Value: 16,
+				Usage: "Number of workers per parallel read.",
+			},
+
+			cli.IntFlag{
+				Name:  "parallel-reads-chunk-size-mb",
+				Value: 50,
+				Usage: "MB per parallel read worker.",
+			},
+
 			/////////////////////////
 			// Monitoring & Logging
 			/////////////////////////
@@ -498,6 +515,11 @@ type flagStorage struct {
 	// Deprecated: Use the param from cfg/config.go
 	EnableNonexistentTypeCache bool
 
+	EnableParallelReads bool
+
+	ParallelReadsMaxWorkers int
+
+	ParallelReadsChunkSizeMb int
 	// Monitoring & Logging
 	// Deprecated: Use the param from cfg/config.go
 	StackdriverExportInterval time.Duration
@@ -633,6 +655,9 @@ func populateFlags(c *cli.Context) (flags *flagStorage, err error) {
 		MaxConnsPerHost:            c.Int("max-conns-per-host"),
 		MaxIdleConnsPerHost:        c.Int("max-idle-conns-per-host"),
 		EnableNonexistentTypeCache: c.Bool("enable-nonexistent-type-cache"),
+		EnableParallelReads:        c.Bool("enable-parallel-reads"),
+		ParallelReadsMaxWorkers:    c.Int("parallel-reads-max-workers"),
+		ParallelReadsChunkSizeMb:   c.Int("parallel-reads-chunk-size-mb"),
 
 		// Monitoring & Logging
 		StackdriverExportInterval:  c.Duration("stackdriver-export-interval"),

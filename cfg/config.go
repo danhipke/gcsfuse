@@ -145,6 +145,12 @@ type GcsConnectionConfig struct {
 	MaxIdleConnsPerHost int64 `yaml:"max-idle-conns-per-host"`
 
 	SequentialReadSizeMb int64 `yaml:"sequential-read-size-mb"`
+
+	EnableParallelReads bool `yaml:"enable-parallel-reads"`
+
+	ParallelReadsMaxWorkers int64 `yaml:"parallel-reads-max-workers"`
+
+	ParallelReadsChunkSizeMb int64 `yaml:"parallel-reads-chunk-size-mb"`
 }
 
 type GcsRetriesConfig struct {
@@ -435,6 +441,9 @@ func BuildFlagSet(flagSet *pflag.FlagSet) error {
 
 	flagSet.IntP("sequential-read-size-mb", "", 200, "File chunk size to read from GCS in one call. Need to specify the value in MB. ChunkSize less than 1MB is not supported")
 
+	flagSet.BoolP("enable-parallel-reads", "", false, "If true, sequential reads are parallelized.")
+	flagSet.IntP("parallel-reads-max-workers", "", 16, "Maximum workers when parallel reads is enabled.")
+	flagSet.IntP("parallel-reads-chunk-size-mb", "", 50, "Chunk size for each parallel read worker.")
 	flagSet.DurationP("stackdriver-export-interval", "", 0*time.Nanosecond, "Export metrics to stackdriver with this interval. The default value 0 indicates no exporting.")
 
 	flagSet.IntP("stat-cache-capacity", "", 20460, "How many entries can the stat-cache hold (impacts memory consumption). This flag has been deprecated (starting v2.0) and in favor of stat-cache-max-size-mb. For now, the value of stat-cache-capacity will be translated to the next higher corresponding value of stat-cache-max-size-mb (assuming stat-cache entry-size ~= 1640 bytes, including 1400 for positive entry and 240 for corresponding negative entry), if stat-cache-max-size-mb is not set.\"")
@@ -725,6 +734,18 @@ func BindFlags(v *viper.Viper, flagSet *pflag.FlagSet) error {
 	}
 
 	if err := v.BindPFlag("gcs-connection.sequential-read-size-mb", flagSet.Lookup("sequential-read-size-mb")); err != nil {
+		return err
+	}
+
+	if err := v.BindPFlag("gcs-connection.enable-parallel-reads", flagSet.Lookup("enable-parallel-reads")); err != nil {
+		return err
+	}
+
+	if err := v.BindPFlag("gcs-connection.parallel-reads-max-workers", flagSet.Lookup("parallel-reads-max-workers")); err != nil {
+		return err
+	}
+
+	if err := v.BindPFlag("gcs-connection.parallel-reads-chunk-size-mb", flagSet.Lookup("parallel-reads-chunk-size-mb")); err != nil {
 		return err
 	}
 

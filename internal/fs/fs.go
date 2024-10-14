@@ -122,6 +122,11 @@ type ServerConfig struct {
 	// File chunk size to read from GCS in one call. Specified in MB.
 	SequentialReadSizeMb int32
 
+	EnableParallelReads bool
+
+	ParallelReadsMaxWorkers int32
+
+	ParallelReadsChunkSizeMb int32
 	// NewConfig has all the config specified by the user using config-file or CLI flags.
 	NewConfig *cfg.Config
 }
@@ -174,6 +179,9 @@ func NewFileSystem(ctx context.Context, serverCfg *ServerConfig) (fuseutil.FileS
 		kernelListCacheTTL:         cfg.ListCacheTTLSecsToDuration(serverCfg.NewConfig.FileSystem.KernelListCacheTtlSecs),
 		renameDirLimit:             serverCfg.RenameDirLimit,
 		sequentialReadSizeMb:       serverCfg.SequentialReadSizeMb,
+		enableParallelReads:        serverCfg.EnableParallelReads,
+		parallelReadsMaxWorkers:    serverCfg.ParallelReadsMaxWorkers,
+		parallelReadsChunkSizeMb:   serverCfg.ParallelReadsChunkSizeMb,
 		uid:                        serverCfg.Uid,
 		gid:                        serverCfg.Gid,
 		fileMode:                   serverCfg.FilePerms,
@@ -347,6 +355,11 @@ type fileSystem struct {
 
 	renameDirLimit       int64
 	sequentialReadSizeMb int32
+	enableParallelReads  bool
+
+	parallelReadsMaxWorkers int32
+
+	parallelReadsChunkSizeMb int32
 
 	// The user and group owning everything in the file system.
 	uid uint32
@@ -1726,7 +1739,7 @@ func (fs *fileSystem) CreateFile(
 	handleID := fs.nextHandleID
 	fs.nextHandleID++
 
-	fs.handles[handleID] = handle.NewFileHandle(child.(*inode.FileInode), fs.fileCacheHandler, fs.cacheFileForRangeRead)
+	fs.handles[handleID] = handle.NewFileHandle(child.(*inode.FileInode), fs.fileCacheHandler, fs.cacheFileForRangeRead, fs.enableParallelReads, fs.parallelReadsMaxWorkers, fs.parallelReadsChunkSizeMb)
 	op.Handle = handleID
 
 	fs.mu.Unlock()
@@ -2363,7 +2376,7 @@ func (fs *fileSystem) OpenFile(
 	handleID := fs.nextHandleID
 	fs.nextHandleID++
 
-	fs.handles[handleID] = handle.NewFileHandle(in, fs.fileCacheHandler, fs.cacheFileForRangeRead)
+	fs.handles[handleID] = handle.NewFileHandle(in, fs.fileCacheHandler, fs.cacheFileForRangeRead, fs.enableParallelReads, fs.parallelReadsMaxWorkers, fs.parallelReadsChunkSizeMb)
 	op.Handle = handleID
 
 	// When we observe object generations that we didn't create, we assign them

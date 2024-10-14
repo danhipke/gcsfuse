@@ -79,7 +79,7 @@ type RandomReader interface {
 
 // NewRandomReader create a random reader for the supplied object record that
 // reads using the given bucket.
-func NewRandomReader(o *gcs.MinObject, bucket gcs.Bucket, sequentialReadSizeMb int32, fileCacheHandler *file.CacheHandler, cacheFileForRangeRead bool) RandomReader {
+func NewRandomReader(o *gcs.MinObject, bucket gcs.Bucket, sequentialReadSizeMb int32, fileCacheHandler *file.CacheHandler, cacheFileForRangeRead bool, enableParallelReadConfig bool, parallelReadMaxWorkers, parallelReadChunkSizeMb int32) RandomReader {
 	return &randomReader{
 		object:                o,
 		bucket:                bucket,
@@ -90,6 +90,11 @@ func NewRandomReader(o *gcs.MinObject, bucket gcs.Bucket, sequentialReadSizeMb i
 		sequentialReadSizeMb:  sequentialReadSizeMb,
 		fileCacheHandler:      fileCacheHandler,
 		cacheFileForRangeRead: cacheFileForRangeRead,
+		parallelReadConfig: parallelReadConfig{
+			enable:      enableParallelReadConfig,
+			maxWorkers:  parallelReadMaxWorkers,
+			chunkSizeMb: parallelReadChunkSizeMb,
+		},
 	}
 }
 
@@ -129,6 +134,16 @@ type randomReader struct {
 	// fileCacheHandle is used to read from the cached location. It is created on the fly
 	// using fileCacheHandler for the given object and bucket.
 	fileCacheHandle *file.CacheHandle
+
+	parallelReadConfig parallelReadConfig
+}
+
+type parallelReadConfig struct {
+	enable bool
+
+	maxWorkers int32
+
+	chunkSizeMb int32
 }
 
 func (rr *randomReader) CheckInvariants() {
@@ -473,7 +488,6 @@ func (rr *randomReader) startRead(
 	if end > int64(rr.object.Size) {
 		end = int64(rr.object.Size)
 	}
-
 	// To avoid overloading GCS and to have reasonable latencies, we will only
 	// fetch data of max size defined by sequentialReadSizeMb.
 	maxSizeToReadFromGCS := int64(rr.sequentialReadSizeMb * MB)
@@ -483,18 +497,31 @@ func (rr *randomReader) startRead(
 
 	// Begin the read.
 	ctx, cancel := context.WithCancel(context.Background())
-	rc, err := rr.bucket.NewReader(
-		ctx,
-		&gcs.ReadObjectRequest{
-			Name:       rr.object.Name,
-			Generation: rr.object.Generation,
-			Range: &gcs.ByteRange{
-				Start: uint64(start),
-				Limit: uint64(end),
-			},
-			ReadCompressed: rr.object.HasContentEncodingGzip(),
-		})
-
+	req := &gcs.ReadObjectRequest{
+		Name:       rr.object.Name,
+		Generation: rr.object.Generation,
+		Range: &gcs.ByteRange{
+			Start: uint64(start),
+			Limit: uint64(end),
+		},
+		ReadCompressed: rr.object.HasContentEncodingGzip(),
+	}
+	logger.Infof("creating reader with start %d and end %d", uint64(start), uint64(end))
+	logger.Infof("parallelReadConfig: %v", rr.parallelReadConfig)
+	var rc io.ReadCloser
+	if rr.parallelReadConfig.enable {
+		rc, err = rr.bucket.NewParallelReader(
+			ctx,
+			req,
+			rr.parallelReadConfig.maxWorkers,
+			rr.parallelReadConfig.chunkSizeMb,
+		)
+	} else {
+		rc, err = rr.bucket.NewReader(
+			ctx,
+			req,
+		)
+	}
 	if err != nil {
 		err = fmt.Errorf("NewReader: %w", err)
 		return

@@ -16,6 +16,7 @@ package gcsx
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"unicode/utf8"
@@ -77,6 +78,12 @@ func (b *prefixBucket) NewReader(
 
 	rc, err = b.wrapped.NewReader(ctx, mReq)
 	return
+}
+
+func (b *prefixBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("prefixBucket: method NewParallelReader is unimplemented")
 }
 
 func (b *prefixBucket) CreateObject(

@@ -651,6 +651,12 @@ func (b *bucket) NewReader(
 	return
 }
 
+func (b *bucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("method NewParallelReader is unimplemented")
+}
+
 // LOCKS_EXCLUDED(b.mu)
 func (b *bucket) CreateObject(
 	ctx context.Context,

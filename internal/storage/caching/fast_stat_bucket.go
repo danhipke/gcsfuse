@@ -198,6 +198,13 @@ func (b *fastStatBucket) NewReader(
 	return
 }
 
+func (b *fastStatBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (rc io.ReadCloser, err error) {
+	rc, err = b.wrapped.NewParallelReader(ctx, req, parallelReadsMaxWorkers, parallelReadsChunkSizeMb)
+	return
+}
+
 // LOCKS_EXCLUDED(b.mu)
 func (b *fastStatBucket) CreateObject(
 	ctx context.Context,

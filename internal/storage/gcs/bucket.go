@@ -70,6 +70,19 @@ type Bucket interface {
 		ctx context.Context,
 		req *ReadObjectRequest) (io.ReadCloser, error)
 
+	// Create a reader for the contents of a particular generation of an object.
+	// On a nil error, the caller must arrange for the reader to be closed when
+	// it is no longer needed.
+	//
+	// Non-existent objects cause either this method or the first read from the
+	// resulting reader to return an error of type *NotFoundError.
+	//
+	// Official documentation:
+	//     https://cloud.google.com/storage/docs/json_api/v1/objects/get
+	NewParallelReader(
+		ctx context.Context,
+		req *ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error)
+
 	// Create or overwrite an object according to the supplied request. The new
 	// object is guaranteed to exist immediately for the purposes of reading (and
 	// eventually for listing) after this method returns a nil error. It is

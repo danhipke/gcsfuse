@@ -15,6 +15,7 @@
 package ratelimit
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/googlecloudplatform/gcsfuse/v2/internal/storage/gcs"
@@ -77,6 +78,12 @@ func (b *throttledBucket) NewReader(
 	}
 
 	return
+}
+
+func (b *throttledBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("throttledBucket: method NewParallelReader is unimplemented")
 }
 
 func (b *throttledBucket) CreateObject(

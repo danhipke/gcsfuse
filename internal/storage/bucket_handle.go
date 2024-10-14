@@ -47,6 +47,10 @@ type bucketHandle struct {
 	bucketName    string
 	bucketType    gcs.BucketType
 	controlClient StorageControlClient
+	// currently unused, figure out if using this or read method
+	enableParallelReads      bool
+	parallelReadsMaxWorkers  int32
+	parallelReadsChunkSizeMb int32
 }
 
 func (bh *bucketHandle) Name() string {
@@ -99,7 +103,6 @@ func (bh *bucketHandle) NewReader(
 		end := int64((*req.Range).Limit)
 		length = end - start
 	}
-
 	obj := bh.bucket.Object(req.Name)
 
 	// Switching to the requested generation of object.
@@ -114,6 +117,26 @@ func (bh *bucketHandle) NewReader(
 	// NewRangeReader creates a "storage.Reader" object which is also io.ReadCloser since it contains both Read() and Close() methods present in io.ReadCloser interface.
 	return obj.NewRangeReader(ctx, start, length)
 }
+
+func (bh *bucketHandle) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error) {
+	// Initialising the starting offset and the length to be read by the reader.
+	start := int64(0)
+	length := int64(-1)
+	// Following the semantics of NewReader method. Passing start, length as 0,-1 reads the entire file.
+	// https://github.com/GoogleCloudPlatform/gcsfuse/blob/34211af652dbaeb012b381a3daf3c94b95f65e00/vendor/cloud.google.com/go/storage/reader.go#L75
+	if req.Range != nil {
+		start = int64((*req.Range).Start)
+		end := int64((*req.Range).Limit)
+		length = end - start
+	}
+	// todo: remove - length should really be end but we need to handle when req.Range is nil
+	end := start + length
+	// todo: handle case where total chunk size is greater than length
+	return NewParallelReader(ctx, bh.bucket, req.Name, req.ReadCompressed, start, req.Generation, end, parallelReadsChunkSizeMb, parallelReadsMaxWorkers)
+}
+
 func (b *bucketHandle) DeleteObject(ctx context.Context, req *gcs.DeleteObjectRequest) error {
 	obj := b.bucket.Object(req.Name)
 

@@ -283,6 +283,12 @@ func (m *mockBucket) NewReader(p0 context.Context, p1 *gcs.ReadObjectRequest) (o
 	return
 }
 
+func (m *mockBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("method NewParallelReader is unimplemented")
+}
+
 func (m *mockBucket) StatObject(p0 context.Context,
 	p1 *gcs.StatObjectRequest) (o0 *gcs.MinObject, o1 *gcs.ExtendedObjectAttributes, o2 error) {
 	// Get a file name and line number for the caller.

@@ -45,13 +45,22 @@ type FileHandle struct {
 	// cacheFileForRangeRead is also valid for cache workflow, if true, object content
 	// will be downloaded for random reads as well too.
 	cacheFileForRangeRead bool
+
+	enableParallelReads bool
+
+	parallelReadsMaxWorkers int32
+
+	parallelReadsChunkSizeMb int32
 }
 
-func NewFileHandle(inode *inode.FileInode, fileCacheHandler *file.CacheHandler, cacheFileForRangeRead bool) (fh *FileHandle) {
+func NewFileHandle(inode *inode.FileInode, fileCacheHandler *file.CacheHandler, cacheFileForRangeRead bool, enableParallelReads bool, parallelReadsMaxWorkers, ParallelReadsChunkSizeMb int32) (fh *FileHandle) {
 	fh = &FileHandle{
-		inode:                 inode,
-		fileCacheHandler:      fileCacheHandler,
-		cacheFileForRangeRead: cacheFileForRangeRead,
+		inode:                    inode,
+		fileCacheHandler:         fileCacheHandler,
+		cacheFileForRangeRead:    cacheFileForRangeRead,
+		enableParallelReads:      enableParallelReads,
+		parallelReadsMaxWorkers:  parallelReadsMaxWorkers,
+		parallelReadsChunkSizeMb: ParallelReadsChunkSizeMb,
 	}
 
 	fh.mu = syncutil.NewInvariantMutex(fh.checkInvariants)
@@ -170,7 +179,7 @@ func (fh *FileHandle) tryEnsureReader(ctx context.Context, sequentialReadSizeMb 
 	}
 
 	// Attempt to create an appropriate reader.
-	rr := gcsx.NewRandomReader(fh.inode.Source(), fh.inode.Bucket(), sequentialReadSizeMb, fh.fileCacheHandler, fh.cacheFileForRangeRead)
+	rr := gcsx.NewRandomReader(fh.inode.Source(), fh.inode.Bucket(), sequentialReadSizeMb, fh.fileCacheHandler, fh.cacheFileForRangeRead, fh.enableParallelReads, fh.parallelReadsMaxWorkers, fh.parallelReadsChunkSizeMb)
 
 	fh.reader = rr
 	return

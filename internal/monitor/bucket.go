@@ -132,6 +132,20 @@ func (mb *monitoringBucket) NewReader(
 	return
 }
 
+func (mb *monitoringBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (rc io.ReadCloser, err error) {
+	startTime := time.Now()
+
+	rc, err = mb.wrapped.NewParallelReader(ctx, req, parallelReadsMaxWorkers, parallelReadsChunkSizeMb)
+	if err == nil {
+		rc = newMonitoringReadCloser(ctx, req.Name, rc)
+	}
+
+	recordRequest(ctx, "NewParallelReader", startTime)
+	return
+}
+
 func (mb *monitoringBucket) CreateObject(
 	ctx context.Context,
 	req *gcs.CreateObjectRequest) (*gcs.Object, error) {

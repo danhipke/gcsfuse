@@ -153,6 +153,30 @@ func (b *debugBucket) NewReader(
 	return
 }
 
+func (b *debugBucket) NewParallelReader(
+	ctx context.Context,
+	req *gcs.ReadObjectRequest, parallelReadsMaxWorkers, parallelReadsChunkSizeMb int32) (rc io.ReadCloser, err error) {
+	id, desc, start := b.startRequest("Read(%q, %v)", req.Name, req.Range)
+
+	// Call through.
+	rc, err = b.wrapped.NewParallelReader(ctx, req, parallelReadsMaxWorkers, parallelReadsChunkSizeMb)
+	if err != nil {
+		b.finishRequest(id, desc, start, &err)
+		return
+	}
+
+	// Return a special reader that prings debug info.
+	rc = &debugReader{
+		bucket:    b,
+		requestID: id,
+		desc:      desc,
+		startTime: start,
+		wrapped:   rc,
+	}
+
+	return
+}
+
 func (b *debugBucket) CreateObject(
 	ctx context.Context,
 	req *gcs.CreateObjectRequest) (o *gcs.Object, err error) {
