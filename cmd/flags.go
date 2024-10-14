@@ -316,7 +316,7 @@ func newApp() (app *cli.App) {
 
 			cli.IntFlag{
 				Name:  "parallel-reads-chunk-size-mb",
-				Value: 50,
+				Value: 10,
 				Usage: "MB per parallel read worker.",
 			},
 

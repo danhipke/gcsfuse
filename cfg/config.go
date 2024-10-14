@@ -443,7 +443,7 @@ func BuildFlagSet(flagSet *pflag.FlagSet) error {
 
 	flagSet.BoolP("enable-parallel-reads", "", false, "If true, sequential reads are parallelized.")
 	flagSet.IntP("parallel-reads-max-workers", "", 16, "Maximum workers when parallel reads is enabled.")
-	flagSet.IntP("parallel-reads-chunk-size-mb", "", 50, "Chunk size for each parallel read worker.")
+	flagSet.IntP("parallel-reads-chunk-size-mb", "", 10, "Chunk size for each parallel read worker.")
 	flagSet.DurationP("stackdriver-export-interval", "", 0*time.Nanosecond, "Export metrics to stackdriver with this interval. The default value 0 indicates no exporting.")
 
 	flagSet.IntP("stat-cache-capacity", "", 20460, "How many entries can the stat-cache hold (impacts memory consumption). This flag has been deprecated (starting v2.0) and in favor of stat-cache-max-size-mb. For now, the value of stat-cache-capacity will be translated to the next higher corresponding value of stat-cache-max-size-mb (assuming stat-cache entry-size ~= 1640 bytes, including 1400 for positive entry and 240 for corresponding negative entry), if stat-cache-max-size-mb is not set.\"")
